@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raahi — Transit Companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #10151c;
+    --panel: #1a222c;
+    --panel-alt: #212b37;
+    --panel-raised: #253140;
+    --border: #2c3844;
+    --text: #ecece2;
+    --muted: #8b96a3;
+    --teal: #34b9a0;
+    --teal-dim: #1f6f60;
+    --amber: #e4a445;
+    --coral: #e2604a;
+    --radius: 10px;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; height:100%; }
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  button, input{ font-family: inherit; }
+  ::selection{ background: rgba(52,185,160,0.35); }
+  .mono{ font-family: 'IBM Plex Mono', monospace; }
+  .hidden{ display:none !important; }
+
+  .line-motif{ display:flex; align-items:center; height: 12px; margin-bottom: 18px; }
+  .line-motif .seg{ height: 3px; flex:1; background: linear-gradient(90deg, var(--teal), var(--amber)); border-radius:2px; }
+  .line-motif .dot{ width:9px; height:9px; border-radius:50%; background: var(--bg); border:3px solid var(--teal); flex-shrink:0; }
+  .line-motif .dot.amber{ border-color: var(--amber); }
+  .line-motif .dot.coral{ border-color: var(--coral); }
+
+  .badge{ display:inline-block; font-size:12px; padding:3px 9px; border-radius:6px; border:1px solid var(--border); color:var(--muted); }
+  .badge.teal{ color:var(--teal); border-color:rgba(52,185,160,.35); background:rgba(52,185,160,.08); }
+  .badge.amber{ color:var(--amber); border-color:rgba(228,164,69,.35); background:rgba(228,164,69,.08); }
+
+  .btn{ font-weight:600; font-size:14px; border:none; border-radius:8px; padding:10px 18px; cursor:pointer; transition: background .15s ease, transform .1s ease; }
+  .btn:active{ transform: scale(0.98); }
+  .btn-primary{ background: var(--teal); color:var(--bg); }
+  .btn-primary:hover{ background:#3fd0b3; }
+  .btn-ghost{ background: transparent; color:var(--text); border:1px solid var(--border); }
+  .btn-ghost:hover{ border-color: var(--muted); }
+  .btn-sm{ padding:6px 12px; font-size:12.5px; border-radius:6px; }
+  .btn-block{ width:100%; }
+
+  .field{ margin-bottom: 14px; }
+  .field label{ display:block; font-size:12.5px; color:var(--muted); margin-bottom:6px; }
+  .field input{ width:100%; background: var(--bg); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:10px 12px; font-size:14.5px; outline:none; }
+  .field input:focus{ border-color: var(--teal); }
+
+  #authScreen{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding: 24px; }
+  .auth-card{ width:100%; max-width: 380px; background: var(--panel); border:1px solid var(--border); border-radius: 14px; padding: 30px 28px 28px; }
+  .auth-card h1{ font-size:22px; margin:0 0 4px; }
+  .auth-card .sub{ color:var(--muted); font-size:13.5px; margin:0 0 22px; line-height:1.5; }
+  .auth-toggle{ display:flex; gap:6px; background: var(--bg); border:1px solid var(--border); border-radius:8px; padding:3px; margin-bottom:22px; }
+  .auth-toggle button{ flex:1; background:transparent; border:none; color:var(--muted); font-size:13.5px; font-weight:600; padding:8px 0; border-radius:6px; cursor:pointer; }
+  .auth-toggle button.active{ background: var(--panel-alt); color:var(--text); }
+  .auth-error{ color:var(--coral); font-size:12.5px; margin: -6px 0 14px; min-height:1px; }
+  .auth-note{ font-size:12px; color:var(--muted); margin-top:16px; text-align:center; line-height:1.5; }
+
+  #appShell{ display:flex; min-height:100vh; }
+  .sidebar{ width: 220px; flex-shrink:0; background: var(--panel); border-right:1px solid var(--border); display:flex; flex-direction:column; padding: 20px 14px; }
+  .sidebar .brand{ display:flex; align-items:center; gap:9px; padding: 4px 8px 22px; }
+  .sidebar .brand .mark{ width:26px; height:26px; border-radius:7px; background: linear-gradient(135deg, var(--teal), var(--amber)); flex-shrink:0; }
+  .sidebar .brand span{ font-weight:700; font-size:16px; }
+
+  .nav-item{ display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:8px; color: var(--muted); font-size:14px; cursor:pointer; margin-bottom:2px; border:1px solid transparent; }
+  .nav-item svg{ width:17px; height:17px; flex-shrink:0; }
+  .nav-item:hover{ color: var(--text); background: var(--panel-alt); }
+  .nav-item.active{ color: var(--teal); background: rgba(52,185,160,0.08); border-color: rgba(52,185,160,0.25); }
+
+  .sidebar-foot{ margin-top:auto; padding-top:14px; border-top:1px solid var(--border); }
+  .user-chip{ display:flex; align-items:center; gap:9px; padding:8px; border-radius:8px; }
+  .user-chip .avatar{ width:30px; height:30px; border-radius:50%; background: var(--panel-raised); color:var(--teal); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
+  .user-chip .name{ font-size:13.5px; font-weight:600; }
+  .user-chip .email{ font-size:11.5px; color:var(--muted); }
+  .logout-btn{ width:100%; margin-top:10px; }
+
+  .main{ flex:1; min-width:0; padding: 26px 32px 60px; }
+  .view{ display:none; }
+  .view.active{ display:block; }
+  .view-head{ margin-bottom: 22px; }
+  .view-head h2{ font-size:22px; margin:0 0 5px; }
+  .view-head p{ color:var(--muted); font-size:13.5px; margin:0; max-width:64ch; line-height:1.5; }
+
+  .stat-grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap:14px; margin-bottom: 26px; }
+  .stat-card{ background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+  .stat-card .n{ font-family:'IBM Plex Mono', monospace; font-size:26px; font-weight:600; color:var(--teal); }
+  .stat-card .l{ font-size:12.5px; color:var(--muted); margin-top:4px; }
+
+  .dash-grid{ display:grid; grid-template-columns: 1.3fr 1fr; gap:16px; }
+  .panel-block{ background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding:18px 20px; }
+  .panel-block h3{ font-size:14.5px; margin:0 0 14px; }
+  .quick-actions{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom: 20px; }
+
+  .activity-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); font-size:13.5px; }
+  .activity-row:last-child{ border-bottom:none; }
+  .activity-row .t{ color:var(--muted); font-size:11.5px; font-family:'IBM Plex Mono', monospace; }
+  .empty-note{ color:var(--muted); font-size:13px; padding: 10px 2px; }
+
+  .board{ background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); overflow:hidden; }
+  .board-head{ display:flex; align-items:center; justify-content:space-between; padding:11px 16px; border-bottom:1px solid var(--border); background: var(--panel-alt); }
+  .board-head .status{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); }
+  .status .pulse{ width:7px; height:7px; border-radius:50%; background: var(--teal); box-shadow:0 0 0 0 rgba(52,185,160,.6); animation: pulse 2s infinite; }
+  .status .pulse.offline{ background: var(--coral); animation:none; }
+  @keyframes pulse{ 0%{ box-shadow:0 0 0 0 rgba(52,185,160,.5);} 70%{ box-shadow:0 0 0 6px rgba(52,185,160,0);} 100%{ box-shadow:0 0 0 0 rgba(52,185,160,0);} }
+
+  .quick-chips{ display:flex; flex-wrap:wrap; gap:8px; padding: 14px 16px 4px; }
+  .chip{ font-size:13px; color:var(--text); background: var(--panel-alt); border:1px solid var(--border); padding:7px 12px; border-radius:999px; cursor:pointer; }
+  .chip:hover{ border-color: var(--teal); }
+
+  .messages{ height: 380px; overflow-y:auto; padding: 16px; display:flex; flex-direction:column; gap:14px; }
+  .messages::-webkit-scrollbar{ width:8px; }
+  .messages::-webkit-scrollbar-thumb{ background: var(--border); border-radius:4px; }
+  .msg{ display:flex; flex-direction:column; max-width:88%; }
+  .msg.user{ align-self:flex-end; align-items:flex-end; }
+  .msg.bot{ align-self:flex-start; align-items:flex-start; }
+  .bubble{ padding:10px 14px; border-radius:10px; font-size:14px; line-height:1.55; }
+  .msg.user .bubble{ background: var(--teal-dim); color:#eafff9; border-bottom-right-radius:3px; }
+  .msg.bot .bubble{ background: var(--panel-alt); border:1px solid var(--border); border-bottom-left-radius:3px; }
+  .retrieval-tag{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--teal); margin:7px 0 5px 2px; display:flex; align-items:center; gap:6px; }
+  .retrieval-tag.error{ color: var(--coral); }
+  .retrieval-tag svg{ width:12px; height:12px; flex-shrink:0; }
+
+  .route-card{ background: var(--bg); border:1px solid var(--border); border-left:3px solid var(--teal); border-radius:8px; padding:11px 13px; margin-top:4px; width:100%; }
+  .route-card.no-match{ border-left-color: var(--coral); }
+  .route-card .row1{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .route-id{ font-family:'IBM Plex Mono', monospace; font-size:13px; font-weight:600; color:var(--amber); background:rgba(228,164,69,.1); border:1px solid rgba(228,164,69,.3); padding:2px 8px; border-radius:5px; }
+  .route-mode{ font-size:11.5px; color:var(--muted); }
+  .route-path{ font-size:13.5px; margin-bottom:7px; }
+  .route-path .arrow{ color:var(--muted); margin:0 4px; }
+  .route-times{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+  .time-pill{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--teal); background:rgba(52,185,160,.1); border:1px solid rgba(52,185,160,.25); padding:3px 8px; border-radius:5px; }
+  .time-pill.next{ color:var(--bg); background:var(--teal); border-color:var(--teal); font-weight:600; }
+  .save-btn{ font-size:11.5px; color:var(--muted); background:transparent; border:1px solid var(--border); border-radius:6px; padding:4px 9px; cursor:pointer; }
+  .save-btn:hover{ color:var(--text); border-color:var(--muted); }
+  .save-btn.saved{ color:var(--teal); border-color: rgba(52,185,160,.35); }
+
+  .typing{ display:flex; gap:4px; padding:12px 14px; background: var(--panel-alt); border:1px solid var(--border); border-radius:10px; border-bottom-left-radius:3px; width:fit-content; }
+  .typing span{ width:6px; height:6px; border-radius:50%; background: var(--muted); animation: blink 1.2s infinite; }
+  .typing span:nth-child(2){ animation-delay:.2s; }
+  .typing span:nth-child(3){ animation-delay:.4s; }
+  @keyframes blink{ 0%,80%,100%{ opacity:.25; } 40%{ opacity:1; } }
+
+  .input-row{ display:flex; gap:8px; padding:12px 14px; border-top:1px solid var(--border); background: var(--panel-alt); }
+  .input-row input{ flex:1; background: var(--bg); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:10px 12px; font-size:14px; outline:none; }
+  .input-row input:focus{ border-color: var(--teal); }
+
+  .backend-note{ font-size:12px; color:var(--muted); padding: 10px 16px 0; line-height:1.5; }
+  .backend-note code{ color:var(--amber); font-family:'IBM Plex Mono', monospace; }
+
+  .explore-controls{ display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center; }
+  .explore-controls input{ flex:1; min-width:200px; background: var(--panel); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:9px 12px; font-size:14px; outline:none; }
+  .explore-controls input:focus{ border-color: var(--teal); }
+  .filter-btn{ font-size:12.5px; background: var(--panel); border:1px solid var(--border); color:var(--muted); padding:8px 13px; border-radius:8px; cursor:pointer; }
+  .filter-btn.active{ color:var(--teal); border-color: rgba(52,185,160,.4); background: rgba(52,185,160,.08); }
+
+  .route-grid{ display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; }
+  .explore-card{ background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding:15px 16px; cursor:pointer; }
+  .explore-card:hover{ border-color: var(--muted); }
+  .explore-card .row1{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .explore-card .path{ font-size:14px; margin-bottom:6px; }
+  .explore-card .stops{ font-size:12px; color:var(--muted); margin-bottom:10px; }
+  .explore-card .expand{ display:none; border-top:1px solid var(--border); margin-top:10px; padding-top:10px; }
+  .explore-card.open .expand{ display:block; }
+  .explore-card .expand .row-actions{ display:flex; justify-content:space-between; align-items:center; margin-top:10px; }
+
+  .clock-strip{ display:flex; align-items:center; justify-content:space-between; background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding:16px 20px; margin-bottom:18px; }
+  .clock-strip .time{ font-family:'IBM Plex Mono', monospace; font-size:28px; font-weight:600; color:var(--teal); }
+  .clock-strip .label{ font-size:12px; color:var(--muted); margin-top:2px; }
+  table.departures{ width:100%; border-collapse:collapse; background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); overflow:hidden; }
+  table.departures th{ text-align:left; font-size:11.5px; color:var(--muted); font-weight:600; padding:11px 14px; border-bottom:1px solid var(--border); background: var(--panel-alt); }
+  table.departures td{ padding:11px 14px; border-bottom:1px solid var(--border); font-size:13.5px; }
+  table.departures tr:last-child td{ border-bottom:none; }
+  .countdown{ font-family:'IBM Plex Mono', monospace; color:var(--amber); }
+  .countdown.soon{ color:var(--teal); font-weight:600; }
+
+  .saved-list{ display:flex; flex-direction:column; gap:10px; }
+  .saved-row{ display:flex; justify-content:space-between; align-items:center; background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding:13px 16px; }
+  .saved-row .info .path{ font-size:14px; margin-bottom:3px; }
+  .saved-row .info .meta{ font-size:12px; color:var(--muted); }
+
+  .profile-card{ background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding:22px; max-width:460px; }
+  .profile-avatar{ width:54px; height:54px; border-radius:50%; background: var(--panel-raised); color:var(--teal); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:20px; margin-bottom:14px; }
+  .toggle-row{ display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-bottom:1px solid var(--border); font-size:13.5px; }
+  .toggle-row:last-of-type{ border-bottom:none; }
+  .switch{ width:38px; height:22px; background: var(--border); border-radius:999px; position:relative; cursor:pointer; flex-shrink:0; }
+  .switch.on{ background: var(--teal); }
+  .switch .knob{ position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; transition: left .15s ease; }
+  .switch.on .knob{ left:18px; }
+
+  @media (max-width: 860px){
+    .stat-grid{ grid-template-columns: repeat(2,1fr); }
+    .dash-grid{ grid-template-columns: 1fr; }
+    .route-grid{ grid-template-columns: 1fr; }
+    .sidebar{ width:76px; }
+    .sidebar .brand span, .nav-item span.label, .user-chip .name, .user-chip .email{ display:none; }
+    .main{ padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="line-motif">
+      <div class="dot"></div><div class="seg"></div>
+      <div class="dot amber"></div><div class="seg"></div>
+      <div class="dot coral"></div>
+    </div>
+    <h1 id="authTitle">Log in to Raahi</h1>
+    <p class="sub">Your Agra bus companion — ask in plain language, get the exact route and timing.</p>
+
+    <div class="auth-toggle">
+      <button id="toggleLogin" class="active">Log in</button>
+      <button id="toggleSignup">Sign up</button>
+    </div>
+
+    <div id="loginForm">
+      <div class="field"><label>Email</label><input type="email" id="loginEmail" placeholder="you@example.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••"></div>
+      <div class="auth-error" id="loginError"></div>
+      <button class="btn btn-primary btn-block" id="loginSubmit">Log in</button>
+      <p class="auth-note">Prototype login — any email and password works, nothing is sent anywhere.</p>
+    </div>
+
+    <div id="signupForm" class="hidden">
+      <div class="field"><label>Full name</label><input type="text" id="signupName" placeholder="Your name"></div>
+      <div class="field"><label>Email</label><input type="email" id="signupEmail" placeholder="you@example.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="signupPassword" placeholder="Create a password"></div>
+      <div class="auth-error" id="signupError"></div>
+      <button class="btn btn-primary btn-block" id="signupSubmit">Create account</button>
+      <p class="auth-note">Prototype signup — stored only in this browser tab's memory for the demo.</p>
+    </div>
+  </div>
+</div>
+
+<div id="appShell" class="hidden">
+
+  <aside class="sidebar">
+    <div class="brand"><div class="mark"></div><span>Raahi</span></div>
+
+    <div class="nav-item active" data-view="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+      <span class="label">Dashboard</span>
+    </div>
+    <div class="nav-item" data-view="assistant">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 8.6 8.6 0 0 1-3.7-.9L3 21l1.9-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg>
+      <span class="label">Ask Raahi</span>
+    </div>
+    <div class="nav-item" data-view="explore">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span class="label">Explore routes</span>
+    </div>
+    <div class="nav-item" data-view="live">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      <span class="label">Live board</span>
+    </div>
+    <div class="nav-item" data-view="saved">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      <span class="label">Saved routes</span>
+    </div>
+    <div class="nav-item" data-view="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+      <span class="label">Profile</span>
+    </div>
+
+    <div class="sidebar-foot">
+      <div class="user-chip">
+        <div class="avatar" id="sideAvatar">R</div>
+        <div>
+          <div class="name" id="sideName">—</div>
+          <div class="email" id="sideEmail">—</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm logout-btn" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <section class="view active" id="view-dashboard">
+      <div class="view-head">
+        <h2 id="dashGreeting">Welcome back</h2>
+        <p>Here's a quick look at your transit activity and the Agra bus routes indexed in this prototype.</p>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="n" id="statRoutes">0</div><div class="l">Routes indexed</div></div>
+        <div class="stat-card"><div class="n" id="statSaved">0</div><div class="l">Saved routes</div></div>
+        <div class="stat-card"><div class="n" id="statSearches">0</div><div class="l">Searches this session</div></div>
+        <div class="stat-card"><div class="n" id="statBackend">Checking</div><div class="l">Backend status</div></div>
+      </div>
+      <div class="dash-grid">
+        <div class="panel-block">
+          <h3>Recent searches</h3>
+          <div id="recentActivity"><p class="empty-note">No searches yet — try asking Raahi something.</p></div>
+        </div>
+        <div class="panel-block">
+          <h3>Quick actions</h3>
+          <div class="quick-actions">
+            <button class="btn btn-primary btn-sm" data-goto="assistant">Ask a route question</button>
+            <button class="btn btn-ghost btn-sm" data-goto="explore">Browse all routes</button>
+            <button class="btn btn-ghost btn-sm" data-goto="live">See live departures</button>
+          </div>
+          <h3>About this prototype</h3>
+          <p class="empty-note" style="line-height:1.6;">Route data is the real AMCTSL (Agra-Mathura City Transport Service Ltd.) timetable, published at uputd.gov.in. Ask Raahi calls a live FastAPI + ChromaDB backend running at <code class="mono">127.0.0.1:8000</code> that performs real retrieval over these routes.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-assistant">
+      <div class="view-head">
+        <h2>Ask Raahi</h2>
+        <p>Ask where you're going in your own words — Raahi calls the RAG backend, which retrieves the matching route from the real Agra timetable and grounds the answer in it.</p>
+      </div>
+      <div class="board">
+        <div class="board-head">
+          <div class="status"><span class="pulse" id="backendPulse"></span> <span id="backendStatusText">Checking backend...</span></div>
+        </div>
+        <p class="backend-note">Calling <code>GET 127.0.0.1:8000/ask?query=...</code> — make sure <code>uvicorn main:app --reload</code> is running in your <code>raahi-backend</code> folder.</p>
+        <div class="quick-chips" id="quickChips"></div>
+        <div class="messages" id="messages"></div>
+        <div class="input-row">
+          <input type="text" id="queryInput" placeholder="e.g. bus from Foundry Nagar to Tajmahal" autocomplete="off">
+          <button class="btn btn-primary" id="sendBtn">Ask</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-explore">
+      <div class="view-head">
+        <h2>Explore routes</h2>
+        <p>Browse the full Agra timetable directly — filter by mode or search for a stop name.</p>
+      </div>
+      <div class="explore-controls">
+        <input type="text" id="exploreSearch" placeholder="Search by stop name...">
+        <button class="filter-btn active" data-mode="All">All</button>
+        <button class="filter-btn" data-mode="Bus">Bus</button>
+      </div>
+      <div class="route-grid" id="routeGrid"></div>
+    </section>
+
+    <section class="view" id="view-live">
+      <div class="view-head">
+        <h2>Live departures board</h2>
+        <p>Upcoming departures across every route in the Agra timetable, closest first.</p>
+      </div>
+      <div class="clock-strip">
+        <div><div class="time mono" id="liveClock">--:--:--</div><div class="label">Current time (your device)</div></div>
+        <span class="badge teal">Auto-refreshing</span>
+      </div>
+      <table class="departures">
+        <thead><tr><th>Route</th><th>Mode</th><th>From → To</th><th>Departs</th><th>In</th></tr></thead>
+        <tbody id="departuresBody"></tbody>
+      </table>
+    </section>
+
+    <section class="view" id="view-saved">
+      <div class="view-head">
+        <h2>Saved routes</h2>
+        <p>Routes you've saved from Ask Raahi or Explore, for quick access.</p>
+      </div>
+      <div class="saved-list" id="savedList"></div>
+    </section>
+
+    <section class="view" id="view-profile">
+      <div class="view-head">
+        <h2>Profile</h2>
+        <p>Demo account settings — nothing here is sent to a server.</p>
+      </div>
+      <div class="profile-card">
+        <div class="profile-avatar" id="profAvatar">R</div>
+        <div class="field"><label>Name</label><input type="text" id="profName"></div>
+        <div class="field"><label>Email</label><input type="email" id="profEmail" disabled></div>
+        <div class="toggle-row">Departure reminders<div class="switch on" data-setting="reminders"><div class="knob"></div></div></div>
+        <div class="toggle-row">Service delay alerts<div class="switch" data-setting="alerts"><div class="knob"></div></div></div>
+        <div class="toggle-row">Weekly usage summary<div class="switch" data-setting="summary"><div class="knob"></div></div></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+const routes = [
+  {"id":"R-1","mode":"Bus","from":"Foundry Nagar","to":"Dewari Chauraha","stops":["Foundry Nagar","Bhagwan Talkies","Dewari Chauraha"],"times":["6:40","7:10","14:54","15:24"]},
+  {"id":"R-2","mode":"Bus","from":"Foundry Nagar","to":"Cantt","stops":["Foundry Nagar","ISBT","Cantt"],"times":["6:09","6:29","6:49","7:09","7:29","13:21","13:41","14:01","14:21","14:41"]},
+  {"id":"R-3","mode":"Bus","from":"Foundry Nagar","to":"Cantt","stops":["Foundry Nagar","Bhagwan Talkies","Cantt"],"times":["6:00","6:36","7:12","8:06","8:42","13:34","14:10","14:46","15:40","16:16"]},
+  {"id":"R-4","mode":"Bus","from":"Foundry Nagar","to":"Cantt","stops":["Foundry Nagar","Dayalbagh","Cantt"],"times":["6:20","6:50","14:22","14:52"]},
+  {"id":"R-5","mode":"Bus","from":"Foundry Nagar","to":"Cantt","stops":["Foundry Nagar","Bhagwan Talkies","Rohta","Cantt"],"times":["14:14","14:30","14:46","15:02","15:18","15:34","15:50","16:06","16:22","16:38"]},
+  {"id":"R-6","mode":"Bus","from":"Foundry Nagar","to":"Tajmahal","stops":["Foundry Nagar","Bhagwan Talkies","Cantt","Arjun Nagar","Airport","Tajmahal"],"times":["6:50","7:20","7:50","16:35","17:05","17:35"]},
+  {"id":"R-7","mode":"Bus","from":"Foundry Nagar","to":"Barhan","stops":["Foundry Nagar","Bhagwan Talkies","Cantt","Barhan"],"times":["6:04","13:10"]},
+  {"id":"R-8","mode":"Bus","from":"Foundry Nagar","to":"Cantt","stops":["Foundry Nagar","Bhagwan Talkies","Paschim Puri (Gautam Rishi College)","Rohta","Cantt"],"times":["7:02","14:14"]},
+  {"id":"R-9","mode":"Bus","from":"Foundry Nagar","to":"Cantt","stops":["Foundry Nagar","Bhagwan Talkies","Iradat Nagar","Cantt"],"times":["7:22","7:52","8:55","9:25","14:24","14:54","15:57","16:27"]},
+  {"id":"R-10","mode":"Bus","from":"Foundry Nagar","to":"Bhagwan","stops":["Foundry Nagar","Ram Bagh","Barhan (Via Awalkhera)","Cantt","Bhagwan"],"times":["6:45","15:06"]},
+  {"id":"R-11","mode":"Bus","from":"Kheragarh","to":"Bijlighar","stops":["Kheragarh","Bijlighar"],"times":["6:07","7:08","8:28","9:08","10:07","10:38","11:08","11:43","12:43","13:43"]},
+  {"id":"R-12","mode":"Bus","from":"Foundry Nagar","to":"Shamshabad","stops":["Foundry Nagar","Bijli Ghar","Shamshabad"],"times":["6:45","7:00","7:30","7:45","8:10","13:37","13:52","14:22","14:37","15:02"]},
+  {"id":"R-13","mode":"Bus","from":"Foundry Nagar","to":"Fatehpur Sikari","stops":["Foundry Nagar","Idgah Bus Stand","Fatehpur Sikari"],"times":["6:11","6:41","7:11","8:11","8:21","12:21","12:51","13:21","14:21","14:31"]},
+  {"id":"R-14","mode":"Bus","from":"Foundry Nagar","to":"Bhagwan Talkies","stops":["Foundry Nagar","Bijli ghar","Fatehabad","Cantt","Bhagwan Talkies"],"times":["6:31","6:51","7:11","7:51","8:11","13:33","13:53","14:13","14:53","15:13"]}
+];
+
+const BACKEND_URL = "http://127.0.0.1:8000";
+
+const quickQueries = [
+  "bus from Foundry Nagar to Tajmahal",
+  "how do I get to Fatehpur Sikari",
+  "any bus to Cantt after 2 PM",
+  "bus to Shamshabad",
+];
+
+function routeById(id){ return routes.find(r => r.id === id); }
+
+const state = {
+  user: null,
+  savedRoutes: [],
+  searchHistory: [],
+  settings: { reminders:true, alerts:false, summary:false },
+  backendOnline: null,
+};
+
+function routeKey(id){ return id; }
+
+const authScreen = document.getElementById('authScreen');
+const appShell = document.getElementById('appShell');
+const toggleLogin = document.getElementById('toggleLogin');
+const toggleSignup = document.getElementById('toggleSignup');
+const loginForm = document.getElementById('loginForm');
+const signupForm = document.getElementById('signupForm');
+const authTitle = document.getElementById('authTitle');
+
+toggleLogin.addEventListener('click', () => {
+  toggleLogin.classList.add('active'); toggleSignup.classList.remove('active');
+  loginForm.classList.remove('hidden'); signupForm.classList.add('hidden');
+  authTitle.textContent = 'Log in to Raahi';
+});
+toggleSignup.addEventListener('click', () => {
+  toggleSignup.classList.add('active'); toggleLogin.classList.remove('active');
+  signupForm.classList.remove('hidden'); loginForm.classList.add('hidden');
+  authTitle.textContent = 'Create your Raahi account';
+});
+
+document.getElementById('loginSubmit').addEventListener('click', () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPassword').value.trim();
+  const err = document.getElementById('loginError');
+  if(!email || !pass){ err.textContent = 'Enter an email and password to continue.'; return; }
+  err.textContent = '';
+  const name = email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+  enterApp({ name, email });
+});
+
+document.getElementById('signupSubmit').addEventListener('click', () => {
+  const name = document.getElementById('signupName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const pass = document.getElementById('signupPassword').value.trim();
+  const err = document.getElementById('signupError');
+  if(!name || !email || !pass){ err.textContent = 'Fill in all fields to create an account.'; return; }
+  err.textContent = '';
+  enterApp({ name, email });
+});
+
+function enterApp(user){
+  state.user = user;
+  authScreen.classList.add('hidden');
+  appShell.classList.remove('hidden');
+  const initial = user.name.trim().charAt(0).toUpperCase() || 'R';
+  document.getElementById('sideAvatar').textContent = initial;
+  document.getElementById('sideName').textContent = user.name;
+  document.getElementById('sideEmail').textContent = user.email;
+  document.getElementById('dashGreeting').textContent = 'Welcome back, ' + user.name.split(' ')[0];
+  document.getElementById('profAvatar').textContent = initial;
+  document.getElementById('profName').value = user.name;
+  document.getElementById('profEmail').value = user.email;
+  refreshDashboard();
+  renderExplore();
+  renderSaved();
+  checkBackend();
+  switchView('dashboard');
+}
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  state.user = null; state.savedRoutes = []; state.searchHistory = [];
+  appShell.classList.add('hidden');
+  authScreen.classList.remove('hidden');
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+  messagesEl.innerHTML = '';
+  seedWelcome();
+});
+
+const navItems = document.querySelectorAll('.nav-item');
+navItems.forEach(item => item.addEventListener('click', () => switchView(item.dataset.view)));
+document.querySelectorAll('[data-goto]').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.goto)));
+
+function switchView(name){
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  navItems.forEach(n => n.classList.toggle('active', n.dataset.view === name));
+  if(name === 'dashboard') refreshDashboard();
+  if(name === 'live') renderDepartures();
+}
+
+async function checkBackend(){
+  const pulse = document.getElementById('backendPulse');
+  const text = document.getElementById('backendStatusText');
+  const stat = document.getElementById('statBackend');
+  try{
+    const res = await fetch(`${BACKEND_URL}/ask?query=test`, { method: 'GET' });
+    if(res.ok){
+      state.backendOnline = true;
+      pulse.classList.remove('offline');
+      text.textContent = `Connected — ${routes.length} routes in backend`;
+      stat.textContent = 'Online';
+      stat.style.color = 'var(--teal)';
+    } else {
+      throw new Error('bad status');
+    }
+  } catch(e){
+    state.backendOnline = false;
+    pulse.classList.add('offline');
+    text.textContent = 'Backend not reachable — start uvicorn';
+    stat.textContent = 'Offline';
+    stat.style.color = 'var(--coral)';
+  }
+}
+
+function refreshDashboard(){
+  document.getElementById('statRoutes').textContent = routes.length;
+  document.getElementById('statSaved').textContent = state.savedRoutes.length;
+  document.getElementById('statSearches').textContent = state.searchHistory.length;
+
+  const box = document.getElementById('recentActivity');
+  if(state.searchHistory.length === 0){
+    box.innerHTML = '<p class="empty-note">No searches yet — try asking Raahi something.</p>';
+  } else {
+    box.innerHTML = state.searchHistory.slice(-5).reverse().map(h =>
+      `<div class="activity-row"><span>${h.query}</span><span class="t">${h.time}</span></div>`
+    ).join('');
+  }
+}
+
+const messagesEl = document.getElementById('messages');
+const inputEl = document.getElementById('queryInput');
+const sendBtn = document.getElementById('sendBtn');
+const chipsEl = document.getElementById('quickChips');
+
+function icon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'; }
+function warnIcon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>'; }
+
+function findTimeAfter(query){
+  const m = query.match(/(\d{1,2})\s?(am|pm)/i);
+  if(!m) return null;
+  let hour = parseInt(m[1],10); const mer = m[2].toLowerCase();
+  if(mer==='pm' && hour!==12) hour+=12; if(mer==='am' && hour===12) hour=0;
+  return hour*60;
+}
+function timeToMinutes(t){ const m=t.match(/^(\d{1,2}):(\d{2})$/); return m? parseInt(m[1],10)*60+parseInt(m[2],10) : null; }
+
+function nextTimesAfter(route, afterMinutes){
+  if(afterMinutes===null) return route.times.slice(0,4);
+  const upcoming = route.times.filter(t => timeToMinutes(t) >= afterMinutes);
+  return upcoming.length ? upcoming.slice(0,4) : ["No more scheduled departures for that time"];
+}
+function renderRouteCard(route, afterMinutes, highlightFirst){
+  const times = nextTimesAfter(route, afterMinutes);
+  const timeHtml = times.map((t,i)=>`<span class="time-pill ${i===0&&highlightFirst?'next':''}">${t}</span>`).join('');
+  const key = routeKey(route.id);
+  const isSaved = state.savedRoutes.includes(key);
+  return `
+    <div class="route-card">
+      <div class="row1"><span class="route-id">${route.id}</span><span class="route-mode">${route.mode} · via ${route.stops.slice(1,-1).join(', ')||'direct'}</span></div>
+      <div class="route-path">${route.from}<span class="arrow">&#8594;</span>${route.to}</div>
+      <div class="route-times">${timeHtml}</div>
+      <button class="save-btn ${isSaved?'saved':''}" data-key="${key}">${isSaved ? '✓ Saved' : '+ Save route'}</button>
+    </div>`;
+}
+function addUserMessage(text){
+  const div = document.createElement('div'); div.className='msg user';
+  div.innerHTML = '<div class="bubble"></div>'; div.querySelector('.bubble').textContent = text;
+  messagesEl.appendChild(div); scrollDown();
+}
+function addTyping(){
+  const div = document.createElement('div'); div.className='msg bot'; div.id='typingIndicator';
+  div.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+  messagesEl.appendChild(div); scrollDown();
+}
+function removeTyping(){ const t=document.getElementById('typingIndicator'); if(t) t.remove(); }
+function scrollDown(){ messagesEl.scrollTop = messagesEl.scrollHeight; }
+
+async function callBackend(query){
+  const url = `${BACKEND_URL}/ask?query=${encodeURIComponent(query)}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error(`Backend returned ${res.status}`);
+  const data = await res.json();
+  return data.retrieved || [];
+}
+
+async function respond(query){
+  const afterMinutes = findTimeAfter(query);
+  let retrieved = [];
+  let backendFailed = false;
+
+  try{
+    retrieved = await callBackend(query);
+    state.backendOnline = true;
+  } catch(e){
+    backendFailed = true;
+    state.backendOnline = false;
+  }
+
+  removeTyping();
+  const botDiv = document.createElement('div'); botDiv.className='msg bot';
+
+  if(backendFailed){
+    botDiv.innerHTML = `<div class="retrieval-tag error">${warnIcon()} backend not reachable</div>
+      <div class="route-card no-match"><div class="route-path">Couldn't reach the RAG backend at <strong>${BACKEND_URL}</strong>. Make sure <code>python -m uvicorn main:app --reload</code> is running in your <code>raahi-backend</code> folder, then try again.</div></div>`;
+    messagesEl.appendChild(botDiv); scrollDown();
+    checkBackend();
+    return;
+  }
+
+  const matchedRoutes = retrieved.map(m => routeById(m.id)).filter(Boolean);
+
+  if(matchedRoutes.length===0){
+    botDiv.innerHTML = `<div class="retrieval-tag">${icon()} backend returned no matching route</div>
+      <div class="route-card no-match"><div class="route-path">I couldn't find a route matching that in the Agra timetable. Try a stop name like <em>Foundry Nagar</em>, <em>Cantt</em>, or <em>Tajmahal</em>.</div></div>`;
+  } else {
+    const tagLine = `<div class="retrieval-tag">${icon()} retrieved ${matchedRoutes.length} matching route${matchedRoutes.length>1?'s':''} from live backend (RAG)</div>`;
+    const cards = matchedRoutes.map((r,i)=>renderRouteCard(r, afterMinutes, i===0)).join('');
+    const first = matchedRoutes[0];
+    const timeNote = afterMinutes!==null ? ' after the time you mentioned' : '';
+    botDiv.innerHTML = `<div class="bubble">Here's what I found${timeNote}: <strong>${first.id}</strong> (${first.mode}) runs from <strong>${first.from}</strong> to <strong>${first.to}</strong>.</div>${tagLine}${cards}`;
+  }
+  messagesEl.appendChild(botDiv); scrollDown();
+}
+
+function handleQuery(text){
+  if(!text.trim()) return;
+  addUserMessage(text);
+  inputEl.value='';
+  const now = new Date();
+  state.searchHistory.push({ query:text, time: now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) });
+  addTyping();
+  respond(text);
+}
+sendBtn.addEventListener('click', ()=>handleQuery(inputEl.value));
+inputEl.addEventListener('keydown', e => { if(e.key==='Enter') handleQuery(inputEl.value); });
+quickQueries.forEach(q => {
+  const chip = document.createElement('button'); chip.className='chip'; chip.textContent=q;
+  chip.addEventListener('click', ()=>handleQuery(q)); chipsEl.appendChild(chip);
+});
+function seedWelcome(){
+  const div = document.createElement('div'); div.className='msg bot';
+  div.innerHTML = '<div class="bubble">Hi, I\'m Raahi. Ask me things like "bus from Foundry Nagar to Tajmahal" and I\'ll check the live backend for you.</div>';
+  messagesEl.appendChild(div);
+}
+seedWelcome();
+
+document.addEventListener('click', e => {
+  if(e.target.classList.contains('save-btn')){
+    toggleSave(e.target.dataset.key);
+  }
+});
+function toggleSave(key){
+  const idx = state.savedRoutes.indexOf(key);
+  if(idx===-1) state.savedRoutes.push(key); else state.savedRoutes.splice(idx,1);
+  document.querySelectorAll(`.save-btn[data-key="${key}"]`).forEach(btn => {
+    const saved = state.savedRoutes.includes(key);
+    btn.classList.toggle('saved', saved);
+    btn.textContent = saved ? '✓ Saved' : '+ Save route';
+  });
+  renderSaved();
+  refreshDashboard();
+}
+
+const routeGrid = document.getElementById('routeGrid');
+const exploreSearch = document.getElementById('exploreSearch');
+let activeModeFilter = 'All';
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); activeModeFilter = btn.dataset.mode; renderExplore();
+  });
+});
+exploreSearch.addEventListener('input', renderExplore);
+
+function normalize(s){ return s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim(); }
+
+function renderExplore(){
+  const q = normalize(exploreSearch.value);
+  const filtered = routes.filter(r => {
+    const modeOk = activeModeFilter==='All' || r.mode===activeModeFilter;
+    const hay = normalize(r.from+" "+r.to+" "+r.stops.join(" "));
+    const searchOk = !q || hay.includes(q);
+    return modeOk && searchOk;
+  });
+  routeGrid.innerHTML = filtered.map((r) => {
+    const key = routeKey(r.id); const isSaved = state.savedRoutes.includes(key);
+    return `
+    <div class="explore-card">
+      <div class="row1"><span class="route-id">${r.id}</span><span class="badge teal">${r.mode}</span></div>
+      <div class="path">${r.from} <span class="arrow" style="color:var(--muted)">&#8594;</span> ${r.to}</div>
+      <div class="stops">${r.stops.length} stops · ${r.times.length} sample departures</div>
+      <div class="expand">
+        <div class="stops"><strong style="color:var(--text)">Stops:</strong> ${r.stops.join(' → ')}</div>
+        <div class="route-times" style="margin-top:8px;">${r.times.slice(0,8).map(t=>`<span class="time-pill">${t}</span>`).join('')}</div>
+        <div class="row-actions">
+          <span class="badge amber">Real AMCTSL timetable</span>
+          <button class="save-btn ${isSaved?'saved':''}" data-key="${key}">${isSaved?'✓ Saved':'+ Save route'}</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') || '<p class="empty-note">No routes match that search.</p>';
+
+  routeGrid.querySelectorAll('.explore-card').forEach(card => {
+    card.addEventListener('click', e => {
+      if(e.target.classList.contains('save-btn')) return;
+      card.classList.toggle('open');
+    });
+  });
+}
+
+const departuresBody = document.getElementById('departuresBody');
+const liveClock = document.getElementById('liveClock');
+
+function renderDepartures(){
+  const now = new Date();
+  const nowMinutes = now.getHours()*60 + now.getMinutes();
+  let flat = [];
+  routes.forEach(r => {
+    r.times.forEach(t => {
+      const mins = timeToMinutes(t);
+      if(mins === null) return;
+      let diff = mins - nowMinutes;
+      if(diff < 0) diff += 24*60;
+      flat.push({ route:r, time:t, diff });
+    });
+  });
+  flat.sort((a,b)=>a.diff-b.diff);
+  flat = flat.slice(0,10);
+  departuresBody.innerHTML = flat.map(f => {
+    const soon = f.diff <= 20;
+    return `<tr>
+      <td><span class="route-id">${f.route.id}</span></td>
+      <td>${f.route.mode}</td>
+      <td>${f.route.from} &#8594; ${f.route.to}</td>
+      <td class="mono">${f.time}</td>
+      <td class="countdown ${soon?'soon':''}">${f.diff===0 ? 'now' : 'in ' + f.diff + ' min'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" class="empty-note">No departures found.</td></tr>';
+}
+
+function tickClock(){
+  const now = new Date();
+  liveClock.textContent = now.toLocaleTimeString([], {hour12:false});
+}
+setInterval(() => {
+  tickClock();
+  if(document.getElementById('view-live').classList.contains('active')) renderDepartures();
+}, 1000);
+tickClock();
+
+const savedListEl = document.getElementById('savedList');
+function renderSaved(){
+  if(state.savedRoutes.length===0){
+    savedListEl.innerHTML = '<p class="empty-note">You haven\'t saved any routes yet. Save one from Ask Raahi or Explore routes.</p>';
+    return;
+  }
+  savedListEl.innerHTML = state.savedRoutes.map(id => {
+    const route = routeById(id);
+    if(!route) return '';
+    return `<div class="saved-row">
+      <div class="info">
+        <div class="path"><span class="route-id">${route.id}</span> &nbsp; ${route.from} &#8594; ${route.to}</div>
+        <div class="meta">${route.mode} · next departures: ${route.times.slice(0,3).join(', ')}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" data-key="${id}">Remove</button>
+    </div>`;
+  }).join('');
+  savedListEl.querySelectorAll('button[data-key]').forEach(btn => {
+    btn.addEventListener('click', () => toggleSave(btn.dataset.key));
+  });
+}
+
+document.querySelectorAll('.switch').forEach(sw => {
+  sw.addEventListener('click', () => {
+    sw.classList.toggle('on');
+    state.settings[sw.dataset.setting] = sw.classList.contains('on');
+  });
+});
+document.getElementById('profName').addEventListener('change', e => {
+  state.user.name = e.target.value;
+  document.getElementById('sideName').textContent = e.target.value;
+  document.getElementById('dashGreeting').textContent = 'Welcome back, ' + e.target.value.split(' ')[0];
+});
+</script>
+</body>
+</html>
